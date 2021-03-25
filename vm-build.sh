@@ -7,7 +7,7 @@ VM_SSH_PUB_KEY=${BASE_PATH}/.ssh/id_rsa.pub
 RPM_HOST_DIR=${BASE_PATH}/rpmbuild/RPMS
 VM_IMAGE_DIR=${BASE_PATH}/works/virt/images
 
-RPM_INSTALL_SCRIPT=${SCRIPT_PATH}/vm-install-rpms.sh
+FIRSTBOOT_SCRIPT=${SCRIPT_PATH}/vm-firstboot.sh
 TOOLS_HOST_DIR=${SCRIPT_PATH}/vm-tools
 
 RPM_GUEST_DIR=/rpmbuild
@@ -83,8 +83,7 @@ done
 if [ "$RPMS" == "1" ]; then
 CUSTOMIZE+=" --mkdir ${RPM_GUEST_DIR} \
              --delete ${RPM_GUEST_DIR}/* \
-             --copy-in ${RPM_HOST_DIR}:${RPM_GUEST_DIR} \
-             --firstboot ${RPM_INSTALL_SCRIPT}"
+             --copy-in ${RPM_HOST_DIR}:${RPM_GUEST_DIR}"
 fi
 
 if [ "$TOOLS" == "1" ]; then
@@ -114,7 +113,9 @@ if  [ "${VM_IMAGE_BASE}" != "${VM_IMAGE}" ] && [ ! -f "${VM_IMAGE}" ]; then
 fi
 
 if [ -n "${CUSTOMIZE}" ]; then
-    virt-customize -a ${VM_IMAGE} --selinux-relabel ${CUSTOMIZE}
+    virt-customize -a ${VM_IMAGE} --selinux-relabel \
+        --firstboot ${FIRSTBOOT_SCRIPT} \
+        ${CUSTOMIZE}
 fi
 
 if [ "$INSTALL" == "1" ]; then
