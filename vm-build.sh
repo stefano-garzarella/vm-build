@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_PATH=/home/stefano
+BASE_PATH="${HOME}"
 SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 VM_SSH_PUB_KEY=${BASE_PATH}/.ssh/id_rsa.pub
