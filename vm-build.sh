@@ -1,0 +1,118 @@
+#!/bin/bash
+
+BASE_PATH=/home/stefano
+SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+
+VM_SSH_PUB_KEY=${BASE_PATH}/.ssh/id_rsa.pub
+RPM_HOST_DIR=${BASE_PATH}/rpmbuild/RPMS
+VM_IMAGE_DIR=${BASE_PATH}/works/virt/images
+
+RPM_INSTALL_SCRIPT=${SCRIPT_PATH}/vm-install-rpms.sh
+TOOLS_HOST_DIR=${SCRIPT_PATH}/vm-tools
+
+RPM_GUEST_DIR=/rpmbuild
+TOOLS_GUEST_DIR=/stefano
+VM=f32-demo
+VM_IMAGE=${VM_IMAGE_DIR}/$VM.qcow2
+VM_IMAGE_BASE=${VM_IMAGE}.base
+OS_NAME=fedora-32
+OS_VARIANT=fedora32
+
+
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+function usage
+{
+    echo -e "usage: $0 [OPTION...]"
+    echo -e ""
+    echo -e "Simple description"
+    echo -e ""
+    echo -e " -i, --install       install VM using virt-install"
+    echo -e " -r, --remove        remove images previously generated"
+    echo -e " --vmdk              generate also VMDK image"
+    echo -e " -h, --help          print this help"
+}
+
+REMOVE=0
+VMDK=0
+INSTALL=0
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -i | --install )
+            INSTALL=1
+            ;;
+        --vmdk )
+            VMDK=1
+            ;;
+        -r | --remove )
+            REMOVE=1
+            ;;
+        -h | --help )
+            usage
+            exit
+            ;;
+        * )
+            echo -e "\n${RED}Parameter not found:${NC} $1\n"
+            usage
+            exit 1
+    esac
+    shift
+done
+
+
+set -x
+
+if [ ! -f "${VM_IMAGE_BASE}" ]; then
+    virt-builder --ssh-inject=root:file:${VM_SSH_PUB_KEY} \
+        --selinux-relabel --root-password=password:redhat \
+        --output=${VM_IMAGE_BASE} \
+        --format=qcow2 --update \
+        --install "@virtualization,libguestfs-tools,libvirt,libvirt-nss,nfs-utils,lksctp-tools,tuned,grubby,rsync,gperftools,fio,perf,gdb,liburing" \
+        --size 10G $OS_NAME || exit
+fi
+
+if [ "$REMOVE" == "1" ]; then
+    rm "${VM_IMAGE}"
+fi
+
+if  [ "${VM_IMAGE_BASE}" != "${VM_IMAGE}" ] && [ ! -f "${VM_IMAGE}" ]; then
+    qemu-img create -f qcow2 -F qcow2 -b ${VM_IMAGE_BASE} ${VM_IMAGE}
+fi
+
+virt-customize -a ${VM_IMAGE} --selinux-relabel \
+    --mkdir ${TOOLS_GUEST_DIR} \
+    --delete "${TOOLS_GUEST_DIR}/*" \
+    --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR} \
+    --mkdir ${RPM_GUEST_DIR} \
+    --delete "${RPM_GUEST_DIR}/*" \
+    --copy-in ${RPM_HOST_DIR}:${RPM_GUEST_DIR} \
+    --firstboot ${RPM_INSTALL_SCRIPT}
+
+if [ "$INSTALL" == "1" ]; then
+    virsh --connect qemu:///system destroy $VM
+    virsh --connect qemu:///system undefine $VM
+
+#    --vsock cid.auto=yes \
+    virt-install --connect qemu:///system --name $VM --import \
+        --noautoconsole --wait \
+        --ram 2048 --vcpus 2 --cpu host \
+        --disk bus=virtio,path=${VM_IMAGE} \
+        --network network=default,model=virtio --os-variant $OS_VARIANT
+
+#    virt-install --name $VM --import --ram 2048 --vcpus 4,cpuset=0,2,4,6 \
+#        --cpu host-passthrough,cache.mode=passthrough \
+#        --cputune vcpupin0.vcpu=0,vcpupin0.cpuset=0,vcpupin1.vcpu=1,vcpupin1.cpuset=2,vcpupin2.vcpu=2,vcpupin2.cpuset=4,vcpupin3.vcpu=3,vcpupin3.cpuset=6 \
+#        --numatune 0 \
+#	--iothreads 4 \
+#        --disk bus=virtio,path=${VM_IMAGE} \
+#        --network network=default,model=virtio --os-variant $OS_VARIANT
+        #--qemu-commandline="-drive file=/dev/nvme0n1,format=raw,if=none,id=hd1,cache=none,aio=io_uring -device virtio-blk-pci,scsi=off,drive=hd1,num-queues=4" \
+fi
+
+if [ "$VMDK" == "1" ]; then
+    sudo qemu-img convert -f qcow2 -O vmdk ${VM_IMAGE} ${VMDK_IMAGE}
+    sudo chown stefano:stefano ${VMDK_IMAGE}
+fi
+
