@@ -26,28 +26,47 @@ function usage
 {
     echo -e "usage: $0 [OPTION...]"
     echo -e ""
-    echo -e "Simple description"
+    echo -e "Build a VM image"
     echo -e ""
+    echo -e " -a, --all           alias for -c -i -r -t"
+    echo -e ""
+    echo -e " -c, --clean         remove image previously generated"
     echo -e " -i, --install       install VM using virt-install"
-    echo -e " -r, --remove        remove images previously generated"
+    echo -e " -r, --rpms          install RPMs in the VM"
+    echo -e " -t, --tools         install vm-tools in the VM"
     echo -e " --vmdk              generate also VMDK image"
     echo -e " -h, --help          print this help"
 }
 
-REMOVE=0
-VMDK=0
+CLEAN=0
 INSTALL=0
+RPMS=0
+TOOLS=0
+VMDK=0
+CUSTOMIZE=""
 
 while [ "$1" != "" ]; do
     case $1 in
+        -a | --all )
+            CLEAN=1
+            INSTALL=1
+            RPMS=1
+            TOOLS=1
+            ;;
+        -c | --clean )
+            CLEAN=1
+            ;;
         -i | --install )
             INSTALL=1
             ;;
+        -r | --rpms )
+            RPMS=1
+            ;;
+        -t | --tools )
+            TOOLS=1
+            ;;
         --vmdk )
             VMDK=1
-            ;;
-        -r | --remove )
-            REMOVE=1
             ;;
         -h | --help )
             usage
@@ -61,6 +80,19 @@ while [ "$1" != "" ]; do
     shift
 done
 
+if [ "$RPMS" == "1" ]; then
+CUSTOMIZE+=" --mkdir ${RPM_GUEST_DIR} \
+             --delete ${RPM_GUEST_DIR}/* \
+             --copy-in ${RPM_HOST_DIR}:${RPM_GUEST_DIR} \
+             --firstboot ${RPM_INSTALL_SCRIPT}"
+fi
+
+if [ "$TOOLS" == "1" ]; then
+CUSTOMIZE+=" --mkdir ${TOOLS_GUEST_DIR} \
+             --delete ${TOOLS_GUEST_DIR}/* \
+             --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR}"
+fi
+
 
 set -x
 
@@ -73,7 +105,7 @@ if [ ! -f "${VM_IMAGE_BASE}" ]; then
         --size 10G $OS_NAME || exit
 fi
 
-if [ "$REMOVE" == "1" ]; then
+if [ "$CLEAN" == "1" ]; then
     rm "${VM_IMAGE}"
 fi
 
@@ -81,14 +113,9 @@ if  [ "${VM_IMAGE_BASE}" != "${VM_IMAGE}" ] && [ ! -f "${VM_IMAGE}" ]; then
     qemu-img create -f qcow2 -F qcow2 -b ${VM_IMAGE_BASE} ${VM_IMAGE}
 fi
 
-virt-customize -a ${VM_IMAGE} --selinux-relabel \
-    --mkdir ${TOOLS_GUEST_DIR} \
-    --delete "${TOOLS_GUEST_DIR}/*" \
-    --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR} \
-    --mkdir ${RPM_GUEST_DIR} \
-    --delete "${RPM_GUEST_DIR}/*" \
-    --copy-in ${RPM_HOST_DIR}:${RPM_GUEST_DIR} \
-    --firstboot ${RPM_INSTALL_SCRIPT}
+if [ -n "${CUSTOMIZE}" ]; then
+    virt-customize -a ${VM_IMAGE} --selinux-relabel ${CUSTOMIZE}
+fi
 
 if [ "$INSTALL" == "1" ]; then
     virsh --connect qemu:///system destroy $VM
