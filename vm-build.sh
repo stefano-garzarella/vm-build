@@ -4,7 +4,7 @@ BASE_PATH="${HOME}"
 SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 VM_SSH_PUB_KEY=${BASE_PATH}/.ssh/id_rsa.pub
-RPM_HOST_DIR=${BASE_PATH}/rpmbuild/RPMS
+RPM_HOST_DIR=${BASE_PATH}/rpmbuild/RPMS/x86_64
 VM_IMAGE_DIR=${BASE_PATH}/works/virt/images
 
 FIRSTBOOT_SCRIPT=${SCRIPT_PATH}/vm-firstboot.sh
@@ -35,6 +35,7 @@ function usage
     echo -e " -c, --clean         remove image previously generated"
     echo -e " -i, --install       install VM using virt-install"
     echo -e " -r, --rpms          install RPMs in the VM"
+    echo -e "     --rpms-dir      directory that contains the RPMs [def. $RPM_HOST_DIR]"
     echo -e " -t, --tools         install vm-tools in the VM"
     echo -e " --vmdk              generate also VMDK image"
     echo -e " -h, --help          print this help"
@@ -63,6 +64,10 @@ while [ "$1" != "" ]; do
             ;;
         -r | --rpms )
             RPMS=1
+            ;;
+        --rpms-dir )
+            shift
+            RPM_HOST_DIR=$1
             ;;
         -t | --tools )
             TOOLS=1

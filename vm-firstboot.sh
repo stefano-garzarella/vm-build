@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RPM_DIR=/rpmbuild/RPMS/x86_64
+RPM_DIR=/rpmbuild/
 VMLINUZ=
 set -x
 
@@ -10,15 +10,15 @@ ENFORCE=$(getenforce)
 # (error: failed to exec scriptlet interpreter /bin/sh: Permission denied)
 setenforce Permissive
 
-for file in $RPM_DIR/*.rpm; do
+for file in $RPM_DIR/*/*.rpm; do
     pkg=$(rpm -q --queryformat "%{NAME}-%{VERSION}\n" $file)
     rpm -e $pkg
 done
 
-for file in $RPM_DIR/*.rpm; do
-    rpm -i $file
+for file in $RPM_DIR/*/*.rpm; do
+    rpm -i --oldpackage $file
     if [ "$VMLINUZ" == "" ]; then
-        VMLINUZ=$(rpm -qpl $file | grep vmlinuz)
+        VMLINUZ=$(rpm -qpl $file | grep /boot/vmlinuz)
     fi
 done
 
