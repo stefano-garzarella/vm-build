@@ -13,7 +13,9 @@ TOOLS_HOST_DIR=${SCRIPT_PATH}/vm-tools
 RPM_GUEST_DIR=/rpmbuild
 TOOLS_GUEST_DIR=/stefano
 VM=f32-demo
-VM_IMAGE=${VM_IMAGE_DIR}/$VM.qcow2
+VM_IMAGE_REL=${VM}.qcow2
+VM_IMAGE_BASE_REL=${VM_IMAGE_REL}.base
+VM_IMAGE=${VM_IMAGE_DIR}/${VM_IMAGE_REL}
 VM_IMAGE_BASE=${VM_IMAGE}.base
 OS_NAME=fedora-32
 OS_VARIANT=fedora32
@@ -109,7 +111,9 @@ if [ "$CLEAN" == "1" ]; then
 fi
 
 if  [ "${VM_IMAGE_BASE}" != "${VM_IMAGE}" ] && [ ! -f "${VM_IMAGE}" ]; then
-    qemu-img create -f qcow2 -F qcow2 -b ${VM_IMAGE_BASE} ${VM_IMAGE}
+    pushd ${VM_IMAGE_DIR}
+    qemu-img create -f qcow2 -F qcow2 -b ${VM_IMAGE_BASE_REL} ${VM_IMAGE_REL}
+    popd
 fi
 
 if [ -n "${CUSTOMIZE}" ]; then
