@@ -8,17 +8,18 @@ RPM_HOST_DIR=${BASE_PATH}/rpmbuild/RPMS/x86_64
 VM_IMAGE_DIR=${BASE_PATH}/works/virt/images
 
 FIRSTBOOT_SCRIPT=${SCRIPT_PATH}/vm-firstboot.sh
+FIRSTBOOT_BASE_SCRIPT=${SCRIPT_PATH}/vm-firstboot-base.sh
 TOOLS_HOST_DIR=${SCRIPT_PATH}/vm-tools
 
 RPM_GUEST_DIR=/rpmbuild
 TOOLS_GUEST_DIR=/stefano
-VM=f32-demo
+VM=f34-demo
 VM_IMAGE_REL=${VM}.qcow2
 VM_IMAGE_BASE_REL=${VM_IMAGE_REL}.base
 VM_IMAGE=${VM_IMAGE_DIR}/${VM_IMAGE_REL}
 VM_IMAGE_BASE=${VM_IMAGE}.base
-OS_NAME=fedora-32
-OS_VARIANT=fedora32
+OS_NAME=fedora-34
+OS_VARIANT=fedora34
 
 
 RED='\033[0;31m'
@@ -103,12 +104,21 @@ fi
 set -x
 
 if [ ! -f "${VM_IMAGE_BASE}" ]; then
+    virsh --connect qemu:///system destroy $VM
+    virsh --connect qemu:///system undefine $VM
+
     virt-builder --ssh-inject=root:file:${VM_SSH_PUB_KEY} \
         --selinux-relabel --root-password=password:redhat \
         --output=${VM_IMAGE_BASE} \
-        --format=qcow2 --update \
-        --install "@virtualization,libguestfs-tools,libvirt,libvirt-nss,nfs-utils,lksctp-tools,tuned,grubby,rsync,gperftools,fio,perf,gdb,liburing" \
+        --format=qcow2 \
+        --firstboot ${FIRSTBOOT_BASE_SCRIPT} \
         --size 10G $OS_NAME || exit
+
+    virt-install --connect qemu:///system --name $VM --import \
+        --noautoconsole --wait \
+        --ram 2048 --vcpus 2 --cpu host \
+        --disk bus=virtio,path=${VM_IMAGE_BASE} \
+        --network network=default,model=virtio --os-variant $OS_VARIANT
 fi
 
 if [ "$CLEAN" == "1" ]; then
