@@ -12,7 +12,7 @@ FIRSTBOOT_BASE_SCRIPT=${SCRIPT_PATH}/vm-firstboot-base.sh
 TOOLS_HOST_DIR=${SCRIPT_PATH}/vm-tools
 
 RPM_GUEST_DIR=/rpmbuild
-TOOLS_GUEST_DIR=/vm-tools
+TOOLS_GUEST_DIR=/
 VM=f34-vm-build
 VM_IMAGE_REL=${VM}.qcow2
 VM_IMAGE_BASE_REL=${VM_IMAGE_REL}.base
@@ -98,13 +98,11 @@ done
 
 if [ "$RPMS" == "1" ]; then
 CUSTOMIZE+=" --mkdir ${RPM_GUEST_DIR} \
-             --delete ${RPM_GUEST_DIR}/* \
              --copy-in ${RPM_HOST_DIR}:${RPM_GUEST_DIR}"
 fi
 
 if [ "$TOOLS" == "1" ]; then
 CUSTOMIZE+=" --mkdir ${TOOLS_GUEST_DIR} \
-             --delete ${TOOLS_GUEST_DIR}/* \
              --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR}"
 fi
 
