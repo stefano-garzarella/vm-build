@@ -3,7 +3,7 @@
 BASE_PATH="${HOME}"
 SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-VM_SSH_PUB_KEY=${BASE_PATH}/.ssh/id_rsa.pub
+SSH_PUB_KEY=${BASE_PATH}/.ssh/id_rsa.pub
 RPM_HOST_DIR=${BASE_PATH}/rpmbuild/RPMS/x86_64
 VM_IMAGE_DIR=${BASE_PATH}/works/virt/images
 
@@ -107,7 +107,7 @@ if [ ! -f "${VM_IMAGE_BASE}" ]; then
     virsh --connect qemu:///system destroy $VM
     virsh --connect qemu:///system undefine $VM
 
-    virt-builder --ssh-inject=root:file:${VM_SSH_PUB_KEY} \
+    virt-builder --ssh-inject=root:file:${SSH_PUB_KEY} \
         --selinux-relabel --root-password=password:redhat \
         --output=${VM_IMAGE_BASE} \
         --format=qcow2 \
