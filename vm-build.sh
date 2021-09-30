@@ -141,13 +141,13 @@ if [ "$INSTALL" == "1" ]; then
     virsh --connect qemu:///system destroy $VM
     virsh --connect qemu:///system undefine $VM
 
-#    --vsock cid.auto=yes \
     virt-install --connect qemu:///system --name $VM --import \
         --noautoconsole --wait \
         --ram 2048 --vcpus 2 --cpu host \
         --disk bus=virtio,path=${VM_IMAGE} \
         --network network=default,model=virtio --os-variant $OS_VARIANT
 
+#    --vsock cid.auto=yes \
 #    virt-install --name $VM --import --ram 2048 --vcpus 4,cpuset=0,2,4,6 \
 #        --cpu host-passthrough,cache.mode=passthrough \
 #        --cputune vcpupin0.vcpu=0,vcpupin0.cpuset=0,vcpupin1.vcpu=1,vcpupin1.cpuset=2,vcpupin2.vcpu=2,vcpupin2.cpuset=4,vcpupin3.vcpu=3,vcpupin3.cpuset=6 \
@@ -159,7 +159,6 @@ if [ "$INSTALL" == "1" ]; then
 fi
 
 if [ "$VMDK" == "1" ]; then
-    sudo qemu-img convert -f qcow2 -O vmdk ${VM_IMAGE} ${VMDK_IMAGE}
-    sudo chown stefano:stefano ${VMDK_IMAGE}
+    qemu-img convert -f qcow2 -O vmdk ${VM_IMAGE} ${VMDK_IMAGE}
 fi
 
