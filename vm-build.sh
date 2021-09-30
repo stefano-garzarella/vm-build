@@ -13,14 +13,8 @@ TOOLS_HOST_DIR=${SCRIPT_PATH}/vm-tools
 
 RPM_GUEST_DIR=/rpmbuild
 TOOLS_GUEST_DIR=/
-VM=f34-vm-build
-VM_IMAGE_REL=${VM}.qcow2
-VM_IMAGE_BASE_REL=${VM_IMAGE_REL}.base
-VM_IMAGE=${VM_IMAGE_DIR}/${VM_IMAGE_REL}
-VM_IMAGE_BASE=${VM_IMAGE}.base
-OS_NAME=fedora-34
-OS_VARIANT=fedora34
 
+FV="34"
 
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -39,8 +33,9 @@ function usage
     echo -e " -c, --clean         remove final image previously generated"
     echo -e " -C, --clean-base    remove base image"
     echo -e " -i, --install       install VM using virt-install"
+    echo -e " -f, --fedora        Fedora version to use [def: ${FV}]"
     echo -e " -r, --rpms          install RPMs in the VM"
-    echo -e "     --rpms-dir      directory that contains the RPMs [def. $RPM_HOST_DIR]"
+    echo -e "     --rpms-dir      directory that contains the RPMs [def: $RPM_HOST_DIR]"
     echo -e " -t, --tools         install vm-tools in the VM"
     echo -e " --vmdk              generate also VMDK image"
     echo -e " -h, --help          print this help"
@@ -70,6 +65,10 @@ while [ "$1" != "" ]; do
             ;;
         -i | --install )
             INSTALL=1
+            ;;
+        -f | --fedora )
+            shift
+            FV=$1
             ;;
         -r | --rpms )
             RPMS=1
@@ -105,6 +104,14 @@ if [ "$TOOLS" == "1" ]; then
 CUSTOMIZE+=" --mkdir ${TOOLS_GUEST_DIR} \
              --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR}"
 fi
+
+VM=f${FV}-vm-build
+VM_IMAGE_REL=${VM}.qcow2
+VM_IMAGE_BASE_REL=${VM_IMAGE_REL}.base
+VM_IMAGE=${VM_IMAGE_DIR}/${VM_IMAGE_REL}
+VM_IMAGE_BASE=${VM_IMAGE}.base
+OS_NAME=fedora-${FV}
+OS_VARIANT=fedora${FV}
 
 set -x
 
