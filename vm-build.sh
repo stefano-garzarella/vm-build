@@ -36,7 +36,8 @@ function usage
     echo -e ""
     echo -e " -a, --all           alias for -c -i -r -t"
     echo -e ""
-    echo -e " -c, --clean         remove image previously generated"
+    echo -e " -c, --clean         remove final image previously generated"
+    echo -e " -C, --clean-base    remove base image"
     echo -e " -i, --install       install VM using virt-install"
     echo -e " -r, --rpms          install RPMs in the VM"
     echo -e "     --rpms-dir      directory that contains the RPMs [def. $RPM_HOST_DIR]"
@@ -45,6 +46,7 @@ function usage
     echo -e " -h, --help          print this help"
 }
 
+CLEAN_BASE=0
 CLEAN=0
 INSTALL=0
 RPMS=0
@@ -62,6 +64,9 @@ while [ "$1" != "" ]; do
             ;;
         -c | --clean )
             CLEAN=1
+            ;;
+        -C | --clean-base )
+            CLEAN_BASE=1
             ;;
         -i | --install )
             INSTALL=1
@@ -103,13 +108,16 @@ CUSTOMIZE+=" --mkdir ${TOOLS_GUEST_DIR} \
              --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR}"
 fi
 
-
 set -x
 
-if [ ! -f "${VM_IMAGE_BASE}" ]; then
-    virsh --connect qemu:///system destroy $VM
-    virsh --connect qemu:///system undefine $VM
+virsh --connect qemu:///system destroy $VM
+virsh --connect qemu:///system undefine $VM
 
+if [ "$CLEAN_BASE" == "1" ]; then
+    rm "${VM_IMAGE_BASE}"
+fi
+
+if [ ! -f "${VM_IMAGE_BASE}" ]; then
     virt-builder --ssh-inject=root:file:${SSH_PUB_KEY} \
         --selinux-relabel --root-password=password:redhat \
         --output=${VM_IMAGE_BASE} \
@@ -122,6 +130,8 @@ if [ ! -f "${VM_IMAGE_BASE}" ]; then
         --ram 2048 --vcpus 2 --cpu host \
         --disk bus=virtio,path=${VM_IMAGE_BASE} \
         --network network=default,model=virtio --os-variant $OS_VARIANT
+
+    virsh --connect qemu:///system undefine $VM
 fi
 
 if [ "$CLEAN" == "1" ]; then
@@ -141,9 +151,6 @@ if [ -n "${CUSTOMIZE}" ]; then
 fi
 
 if [ "$INSTALL" == "1" ]; then
-    virsh --connect qemu:///system destroy $VM
-    virsh --connect qemu:///system undefine $VM
-
     virt-install --connect qemu:///system --name $VM --import \
         --noautoconsole --wait \
         --ram 2048 --vcpus 2 --cpu host \
