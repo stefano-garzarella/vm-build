@@ -147,6 +147,7 @@ fi
 if [ -n "${CUSTOMIZE}" ]; then
     virt-customize -a ${VM_IMAGE} --selinux-relabel \
         --firstboot ${FIRSTBOOT_SCRIPT} \
+        --hostname ${VM} \
         ${CUSTOMIZE}
 fi
 
