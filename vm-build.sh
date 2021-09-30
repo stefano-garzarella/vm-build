@@ -28,7 +28,7 @@ function usage
     echo -e "  The final image (backed on the base image) will contain the RPMs"
     echo -e "  installed."
     echo -e ""
-    echo -e " -a, --all           alias for -c -i -r -t"
+    echo -e " -a, --all           alias for -c -i -r -s -t"
     echo -e ""
     echo -e " -c, --clean         remove final image previously generated"
     echo -e " -C, --clean-base    remove base image"
@@ -36,6 +36,7 @@ function usage
     echo -e " -f, --fedora        Fedora version to use [def: ${FV}]"
     echo -e " -r, --rpms          install RPMs in the VM"
     echo -e "     --rpms-dir      directory that contains the RPMs [def: $RPM_HOST_DIR]"
+    echo -e " -s, --start         start the VM at the end"
     echo -e " -t, --tools         install vm-tools in the VM"
     echo -e " --vmdk              generate also VMDK image"
     echo -e " -h, --help          print this help"
@@ -43,11 +44,12 @@ function usage
 
 CLEAN_BASE=0
 CLEAN=0
+CUSTOMIZE=""
 INSTALL=0
 RPMS=0
+START=0
 TOOLS=0
 VMDK=0
-CUSTOMIZE=""
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -55,6 +57,7 @@ while [ "$1" != "" ]; do
             CLEAN=1
             INSTALL=1
             RPMS=1
+            START=1
             TOOLS=1
             ;;
         -c | --clean )
@@ -76,6 +79,9 @@ while [ "$1" != "" ]; do
         --rpms-dir )
             shift
             RPM_HOST_DIR=$1
+            ;;
+        -s | --start )
+            START=1
             ;;
         -t | --tools )
             TOOLS=1
@@ -178,3 +184,8 @@ if [ "$VMDK" == "1" ]; then
     qemu-img convert -f qcow2 -O vmdk ${VM_IMAGE} ${VMDK_IMAGE}
 fi
 
+if [ "$START" == "1" ]; then
+    virsh --connect qemu:///system start ${VM}
+    echo "You can attach your domain by running:"
+    echo "  virsh --connect qemu:///system console ${VM}"
+fi
