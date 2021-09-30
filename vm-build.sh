@@ -29,7 +29,10 @@ function usage
 {
     echo -e "usage: $0 [OPTION...]"
     echo -e ""
-    echo -e "Build a VM image"
+    echo -e "Build a VM image."
+    echo -e "  Base image will contain OS and base packages. "
+    echo -e "  The final image (backed on the base image) will contain the RPMs"
+    echo -e "  installed."
     echo -e ""
     echo -e " -a, --all           alias for -c -i -r -t"
     echo -e ""
