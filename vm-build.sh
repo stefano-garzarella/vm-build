@@ -12,8 +12,8 @@ FIRSTBOOT_BASE_SCRIPT=${SCRIPT_PATH}/vm-firstboot-base.sh
 TOOLS_HOST_DIR=${SCRIPT_PATH}/vm-tools
 
 RPM_GUEST_DIR=/rpmbuild
-TOOLS_GUEST_DIR=/stefano
-VM=f34-demo
+TOOLS_GUEST_DIR=/vm-tools
+VM=f34-vm-build
 VM_IMAGE_REL=${VM}.qcow2
 VM_IMAGE_BASE_REL=${VM_IMAGE_REL}.base
 VM_IMAGE=${VM_IMAGE_DIR}/${VM_IMAGE_REL}
