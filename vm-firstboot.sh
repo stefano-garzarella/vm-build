@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RPM_DIR=/rpmbuild/
+RPM_DIR=/rpms/
 VMLINUZ=
 set -x
 

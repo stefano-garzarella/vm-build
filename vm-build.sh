@@ -4,14 +4,15 @@ BASE_PATH="${HOME}"
 SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 SSH_PUB_KEY=${BASE_PATH}/.ssh/id_rsa.pub
-RPM_HOST_DIR=${BASE_PATH}/rpmbuild/RPMS/x86_64
+RPMS_DIR=${BASE_PATH}/rpmbuild/RPMS/x86_64
 VM_IMAGE_DIR=${BASE_PATH}/works/virt/images
 
 FIRSTBOOT_SCRIPT=${SCRIPT_PATH}/vm-firstboot.sh
 FIRSTBOOT_BASE_SCRIPT=${SCRIPT_PATH}/vm-firstboot-base.sh
 TOOLS_HOST_DIR=${SCRIPT_PATH}/vm-tools
 
-RPM_GUEST_DIR=/rpmbuild
+RPMS_HOST_DIR=${SCRIPT_PATH}/rpms
+RPMS_GUEST_DIR=/rpms
 TOOLS_GUEST_DIR=/
 
 FV="34"
@@ -35,7 +36,8 @@ function usage
     echo -e " -i, --install       install VM using virt-install"
     echo -e " -f, --fedora        Fedora version to use [def: ${FV}]"
     echo -e " -r, --rpms          install RPMs in the VM"
-    echo -e "     --rpms-dir      directory that contains the RPMs [def: $RPM_HOST_DIR]"
+    echo -e "     --rpms-dir      directory that contains the RPMs [def: $RPMS_DIR]"
+    echo -e "     --rpms-remove   remove RPMs from the host directory"
     echo -e " -s, --start         start the VM at the end"
     echo -e " -t, --tools         install vm-tools in the VM"
     echo -e " --vmdk              generate also VMDK image"
@@ -47,6 +49,7 @@ CLEAN=0
 CUSTOMIZE=""
 INSTALL=0
 RPMS=0
+RPMS_REMOVE=0
 START=0
 TOOLS=0
 VMDK=0
@@ -78,7 +81,11 @@ while [ "$1" != "" ]; do
             ;;
         --rpms-dir )
             shift
-            RPM_HOST_DIR=$1
+            RPMS_DIR=$1
+            ;;
+        --rpms-remove )
+            shift
+            RPMS_REMOVE=$1
             ;;
         -s | --start )
             START=1
@@ -102,13 +109,24 @@ while [ "$1" != "" ]; do
 done
 
 if [ "$RPMS" == "1" ]; then
-CUSTOMIZE+=" --mkdir ${RPM_GUEST_DIR} \
-             --copy-in ${RPM_HOST_DIR}:${RPM_GUEST_DIR}"
+    if [ ! -d "$RPMS_HOST_DIR" ]; then
+        mkdir "$RPMS_HOST_DIR"
+    fi
+
+    rm "$RPMS_HOST_DIR"/*
+    if [ "$RPMS_REMOVE" == "1" ]; then
+        mv "${RPMS_DIR}"/*rpm "$RPMS_HOST_DIR"/
+    else
+        cp "${RPMS_DIR}"/*rpm "$RPMS_HOST_DIR"/
+    fi
+
+    CUSTOMIZE+=" --mkdir ${RPMS_GUEST_DIR} \
+                 --copy-in ${RPMS_HOST_DIR}:${RPMS_GUEST_DIR}"
 fi
 
 if [ "$TOOLS" == "1" ]; then
-CUSTOMIZE+=" --mkdir ${TOOLS_GUEST_DIR} \
-             --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR}"
+    CUSTOMIZE+=" --mkdir ${TOOLS_GUEST_DIR} \
+                 --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR}"
 fi
 
 VM=f${FV}-vm-build
