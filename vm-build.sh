@@ -129,6 +129,10 @@ if [ "$TOOLS" == "1" ]; then
                  --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR}"
 fi
 
+if [ ! -d "$VM_IMAGE_DIR" ]; then
+    mkdir -p "$VM_IMAGE_DIR"
+fi
+
 VM=f${FV}-vm-build
 VM_IMAGE_REL=${VM}.qcow2
 VM_IMAGE_BASE_REL=${VM_IMAGE_REL}.base
