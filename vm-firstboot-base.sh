@@ -14,7 +14,7 @@ dnf -y --best update
 
 dnf -y install @virtualization libguestfs-tools libvirt libvirt-nss nfs-utils \
     lksctp-tools tuned grubby rsync gperftools fio perf gdb liburing driverctl \
-    nmap
+    nmap git meson python3-docutils
 
 setenforce $ENFORCE
 
