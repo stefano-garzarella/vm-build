@@ -85,7 +85,7 @@ while [ "$1" != "" ]; do
             ;;
         --rpms-remove )
             shift
-            RPMS_REMOVE=$1
+            RPMS_REMOVE=1
             ;;
         -s | --start )
             START=1
