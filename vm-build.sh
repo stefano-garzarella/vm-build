@@ -84,7 +84,6 @@ while [ "$1" != "" ]; do
             RPMS_DIR=$1
             ;;
         --rpms-remove )
-            shift
             RPMS_REMOVE=1
             ;;
         -s | --start )
