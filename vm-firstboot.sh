@@ -15,8 +15,9 @@ for file in $RPM_DIR/*/*.rpm; do
     rpm -e $pkg
 done
 
+rpm -U --oldpackage $RPM_DIR/*/*.rpm
 for file in $RPM_DIR/*/*.rpm; do
-    rpm -i --oldpackage $file
+    #rpm -i --oldpackage $file
     if [ "$VMLINUZ" == "" ]; then
         VMLINUZ=$(rpm -qpl $file | grep /boot/vmlinuz)
     fi
