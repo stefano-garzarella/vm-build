@@ -188,7 +188,7 @@ if [ "$INSTALL" == "1" ]; then
         --noautoconsole --wait \
         --ram 2048 --vcpus 2 --cpu host \
         --disk bus=virtio,path=${VM_IMAGE} \
-        --network network=default,model=virtio --os-variant $OS_VARIANT
+        --network network=default,model=virtio,driver.name="qemu" --os-variant $OS_VARIANT
 
 #    --vsock cid.auto=yes \
 #    virt-install --name $VM --import --ram 2048 --vcpus 4,cpuset=0,2,4,6 \
