@@ -167,7 +167,7 @@ if [ ! -f "${VM_IMAGE_BASE}" ]; then
 fi
 
 if [ "$CLEAN" == "1" ]; then
-    rm "${VM_IMAGE}"
+    rm -f "${VM_IMAGE}"
 fi
 
 if  [ "${VM_IMAGE_BASE}" != "${VM_IMAGE}" ] && [ ! -f "${VM_IMAGE}" ]; then
