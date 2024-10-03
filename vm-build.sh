@@ -40,6 +40,7 @@ function usage
     echo -e "     --rpms-remove   remove RPMs from the host directory"
     echo -e " -s, --start         start the VM at the end"
     echo -e " -t, --tools         install vm-tools in the VM"
+    echo -e " -v, --verbose       increase verbosity of this script"
     echo -e "     --vmdk          generate also VMDK image"
     echo -e " -h, --help          print this help"
 }
@@ -53,6 +54,7 @@ RPMS_REMOVE=0
 START=0
 TOOLS=0
 VMDK=0
+VERBOSE=0
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -91,6 +93,9 @@ while [ "$1" != "" ]; do
             ;;
         -t | --tools )
             TOOLS=1
+            ;;
+        -v | --verbose )
+            VERBOSE=1
             ;;
         --vmdk )
             VMDK=1
@@ -141,7 +146,9 @@ VM_IMAGE_BASE=${VM_IMAGE}.base
 OS_NAME=fedora-${FV}
 OS_VARIANT=fedora${FV}
 
-set -x
+if [ "${VERBOSE}" == "1" ]; then
+    set -x
+fi
 
 virsh --connect qemu:///system destroy "${VM}"
 virsh --connect qemu:///system undefine "${VM}"
