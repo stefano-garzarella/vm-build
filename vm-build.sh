@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BASE_PATH="${HOME}"
-SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 || exit ; pwd -P )"
 
 SSH_PUB_KEY=${BASE_PATH}/.ssh/id_rsa.pub
 RPMS_DIR=${BASE_PATH}/rpmbuild/RPMS/x86_64
@@ -40,13 +40,13 @@ function usage
     echo -e "     --rpms-remove   remove RPMs from the host directory"
     echo -e " -s, --start         start the VM at the end"
     echo -e " -t, --tools         install vm-tools in the VM"
-    echo -e " --vmdk              generate also VMDK image"
+    echo -e "     --vmdk          generate also VMDK image"
     echo -e " -h, --help          print this help"
 }
 
 CLEAN_BASE=0
 CLEAN=0
-CUSTOMIZE=""
+CUSTOMIZE_EXTRA=""
 INSTALL=0
 RPMS=0
 RPMS_REMOVE=0
@@ -107,88 +107,97 @@ while [ "$1" != "" ]; do
     shift
 done
 
-if [ "$RPMS" == "1" ]; then
-    if [ ! -d "$RPMS_HOST_DIR" ]; then
-        mkdir "$RPMS_HOST_DIR"
+if [ "${RPMS}" == "1" ]; then
+    if [ ! -d "${RPMS_HOST_DIR}" ]; then
+        mkdir "${RPMS_HOST_DIR}"
     fi
 
-    rm "$RPMS_HOST_DIR"/*
-    if [ "$RPMS_REMOVE" == "1" ]; then
-        mv "${RPMS_DIR}"/*rpm "$RPMS_HOST_DIR"/
+    rm "${RPMS_HOST_DIR}"/*
+    if [ "${RPMS_REMOVE}" == "1" ]; then
+        mv "${RPMS_DIR}"/*rpm "${RPMS_HOST_DIR}"/
     else
-        cp "${RPMS_DIR}"/*rpm "$RPMS_HOST_DIR"/
+        cp "${RPMS_DIR}"/*rpm "${RPMS_HOST_DIR}"/
     fi
 
-    CUSTOMIZE+=" --mkdir ${RPMS_GUEST_DIR} \
-                 --copy-in ${RPMS_HOST_DIR}:${RPMS_GUEST_DIR}"
+    CUSTOMIZE_EXTRA+="--mkdir ${RPMS_GUEST_DIR} "
+    CUSTOMIZE_EXTRA+="--copy-in ${RPMS_HOST_DIR}:${RPMS_GUEST_DIR} "
 fi
 
-if [ "$TOOLS" == "1" ]; then
-    CUSTOMIZE+=" --mkdir ${TOOLS_GUEST_DIR} \
-                 --copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR}"
+if [ "${TOOLS}" == "1" ]; then
+    CUSTOMIZE_EXTRA+="--mkdir ${TOOLS_GUEST_DIR} "
+    CUSTOMIZE_EXTRA+="--copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR} "
 fi
 
-if [ ! -d "$VM_IMAGE_DIR" ]; then
-    mkdir -p "$VM_IMAGE_DIR"
+if [ ! -d "${VM_IMAGE_DIR}" ]; then
+    mkdir -p "${VM_IMAGE_DIR}"
 fi
 
 VM=f${FV}-vm-build
 VM_IMAGE_REL=${VM}.qcow2
 VM_IMAGE_BASE_REL=${VM_IMAGE_REL}.base
 VM_IMAGE=${VM_IMAGE_DIR}/${VM_IMAGE_REL}
+VMDK_IMAGE=${VM_IMAGE_DIR}/${VM}.vmdk
 VM_IMAGE_BASE=${VM_IMAGE}.base
 OS_NAME=fedora-${FV}
 OS_VARIANT=fedora${FV}
 
 set -x
 
-virsh --connect qemu:///system destroy $VM
-virsh --connect qemu:///system undefine $VM
+virsh --connect qemu:///system destroy "${VM}"
+virsh --connect qemu:///system undefine "${VM}"
 
-if [ "$CLEAN_BASE" == "1" ]; then
+if [ "${CLEAN_BASE}" == "1" ]; then
     rm "${VM_IMAGE_BASE}"
 fi
 
 if [ ! -f "${VM_IMAGE_BASE}" ]; then
-    virt-builder --ssh-inject=root:file:${SSH_PUB_KEY} \
+    virt-builder --ssh-inject=root:file:"${SSH_PUB_KEY}" \
         --selinux-relabel --root-password=password:redhat \
-        --output=${VM_IMAGE_BASE} \
+        --output="${VM_IMAGE_BASE}" \
         --format=qcow2 \
-        --firstboot ${FIRSTBOOT_BASE_SCRIPT} \
-        --size 10G $OS_NAME || exit
+        --firstboot "${FIRSTBOOT_BASE_SCRIPT}" \
+        --size 10G "${OS_NAME}" \
+        || exit
 
-    virt-install --connect qemu:///system --name $VM --import \
+    virt-install --connect qemu:///system --name "${VM}" --import \
         --noautoconsole --wait \
         --ram 2048 --vcpus 2 --cpu host \
-        --disk bus=virtio,path=${VM_IMAGE_BASE} \
-        --network network=default,model=virtio --os-variant $OS_VARIANT
+        --disk bus=virtio,path="${VM_IMAGE_BASE}" \
+        --network network=default,model=virtio --os-variant "${OS_VARIANT}" \
+        || exit
 
-    virsh --connect qemu:///system undefine $VM
+    virsh --connect qemu:///system undefine "${VM}"
 fi
 
-if [ "$CLEAN" == "1" ]; then
+if [ "${CLEAN}" == "1" ]; then
     rm -f "${VM_IMAGE}"
 fi
 
 if  [ "${VM_IMAGE_BASE}" != "${VM_IMAGE}" ] && [ ! -f "${VM_IMAGE}" ]; then
-    pushd ${VM_IMAGE_DIR}
-    qemu-img create -f qcow2 -F qcow2 -b ${VM_IMAGE_BASE_REL} ${VM_IMAGE_REL}
-    popd
+    pushd "${VM_IMAGE_DIR}" || exit
+    qemu-img create -f qcow2 -F qcow2 \
+        -b "${VM_IMAGE_BASE_REL}" "${VM_IMAGE_REL}" \
+        || exit
+    popd || exit
 fi
 
-if [ -n "${CUSTOMIZE}" ]; then
-    virt-customize -a ${VM_IMAGE} --selinux-relabel \
-        --firstboot ${FIRSTBOOT_SCRIPT} \
-        --hostname ${VM} \
-        ${CUSTOMIZE}
+if [ -n "${CUSTOMIZE_EXTRA}" ]; then
+    # shellcheck disable=SC2086
+    virt-customize -a "${VM_IMAGE}" --selinux-relabel \
+        --firstboot "${FIRSTBOOT_SCRIPT}" \
+        --hostname "${VM}" \
+        ${CUSTOMIZE_EXTRA} \
+        || exit
 fi
 
-if [ "$INSTALL" == "1" ]; then
-    virt-install --connect qemu:///system --name $VM --import \
+if [ "${INSTALL}" == "1" ]; then
+    virt-install --connect qemu:///system --name "${VM}" --import \
         --noautoconsole --wait \
         --ram 2048 --vcpus 2 --cpu host \
-        --disk bus=virtio,path=${VM_IMAGE} \
-        --network network=default,model=virtio,driver.name="qemu" --os-variant $OS_VARIANT
+        --disk bus=virtio,path="${VM_IMAGE}" \
+        --network network=default,model=virtio,driver.name="qemu" \
+        --os-variant "${OS_VARIANT}" \
+        || exit
 
 #    --vsock cid.auto=yes \
 #    virt-install --name $VM --import --ram 2048 --vcpus 4,cpuset=0,2,4,6 \
@@ -201,12 +210,12 @@ if [ "$INSTALL" == "1" ]; then
         #--qemu-commandline="-drive file=/dev/nvme0n1,format=raw,if=none,id=hd1,cache=none,aio=io_uring -device virtio-blk-pci,scsi=off,drive=hd1,num-queues=4" \
 fi
 
-if [ "$VMDK" == "1" ]; then
-    qemu-img convert -f qcow2 -O vmdk ${VM_IMAGE} ${VMDK_IMAGE}
+if [ "${VMDK}" == "1" ]; then
+    qemu-img convert -f qcow2 -O vmdk "${VM_IMAGE}" "${VMDK_IMAGE}" || exit
 fi
 
-if [ "$START" == "1" ]; then
-    virsh --connect qemu:///system start ${VM}
+if [ "${START}" == "1" ]; then
+    virsh --connect qemu:///system start "${VM}" || exit
     echo "You can attach your domain by running:"
     echo "  virsh --connect qemu:///system console ${VM}"
 fi
