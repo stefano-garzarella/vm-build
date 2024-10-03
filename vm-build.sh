@@ -29,7 +29,7 @@ function usage
     echo -e "  The final image (backed on the base image) will contain the RPMs"
     echo -e "  installed."
     echo -e ""
-    echo -e " -a, --all           alias for -c -i -r -s -t"
+    echo -e " -a, --all           alias for -c -i -r -s -t --vsock"
     echo -e ""
     echo -e " -c, --clean         remove final image previously generated"
     echo -e " -C, --clean-base    remove base image"
@@ -42,6 +42,7 @@ function usage
     echo -e " -t, --tools         install vm-tools in the VM"
     echo -e " -v, --verbose       increase verbosity of this script"
     echo -e "     --vmdk          generate also VMDK image"
+    echo -e "     --vsock         attach a vsock device when installing the VM"
     echo -e " -h, --help          print this help"
 }
 
@@ -49,12 +50,14 @@ CLEAN_BASE=0
 CLEAN=0
 CUSTOMIZE_EXTRA=""
 INSTALL=0
+INSTALL_EXTRA=""
 RPMS=0
 RPMS_REMOVE=0
 START=0
 TOOLS=0
 VMDK=0
 VERBOSE=0
+VSOCK=0
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -64,6 +67,7 @@ while [ "$1" != "" ]; do
             RPMS=1
             START=1
             TOOLS=1
+            VSOCK=1
             ;;
         -c | --clean )
             CLEAN=1
@@ -100,6 +104,9 @@ while [ "$1" != "" ]; do
         --vmdk )
             VMDK=1
             ;;
+        --vsock )
+            VSOCK=1
+            ;;
         -h | --help )
             usage
             exit
@@ -131,6 +138,10 @@ fi
 if [ "${TOOLS}" == "1" ]; then
     CUSTOMIZE_EXTRA+="--mkdir ${TOOLS_GUEST_DIR} "
     CUSTOMIZE_EXTRA+="--copy-in ${TOOLS_HOST_DIR}:${TOOLS_GUEST_DIR} "
+fi
+
+if [ "${VSOCK}" == "1" ]; then
+    INSTALL_EXTRA+="--vsock cid.auto=yes "
 fi
 
 if [ ! -d "${VM_IMAGE_DIR}" ]; then
@@ -198,15 +209,16 @@ if [ -n "${CUSTOMIZE_EXTRA}" ]; then
 fi
 
 if [ "${INSTALL}" == "1" ]; then
+    # shellcheck disable=SC2086
     virt-install --connect qemu:///system --name "${VM}" --import \
         --noautoconsole --wait \
         --ram 2048 --vcpus 2 --cpu host \
         --disk bus=virtio,path="${VM_IMAGE}" \
         --network network=default,model=virtio,driver.name="qemu" \
         --os-variant "${OS_VARIANT}" \
+        ${INSTALL_EXTRA} \
         || exit
 
-#    --vsock cid.auto=yes \
 #    virt-install --name $VM --import --ram 2048 --vcpus 4,cpuset=0,2,4,6 \
 #        --cpu host-passthrough,cache.mode=passthrough \
 #        --cputune vcpupin0.vcpu=0,vcpupin0.cpuset=0,vcpupin1.vcpu=1,vcpupin1.cpuset=2,vcpupin2.vcpu=2,vcpupin2.cpuset=4,vcpupin3.vcpu=3,vcpupin3.cpuset=6 \
