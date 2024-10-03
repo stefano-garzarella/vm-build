@@ -16,6 +16,8 @@ RPMS_GUEST_DIR=/rpms
 TOOLS_GUEST_DIR=/
 
 FV="39"
+VCPUS=2
+RAM=2048
 
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -35,11 +37,13 @@ function usage
     echo -e " -C, --clean-base    remove base image"
     echo -e " -i, --install       install VM using virt-install"
     echo -e " -f, --fedora        Fedora version to use [def: ${FV}]"
+    echo -e "     --ram           Configure guest RAM in MiB [def: ${RAM}]"
     echo -e " -r, --rpms          install RPMs in the VM"
     echo -e "     --rpms-dir      directory that contains the RPMs [def: $RPMS_DIR]"
     echo -e "     --rpms-remove   remove RPMs from the host directory"
     echo -e " -s, --start         start the VM at the end"
     echo -e " -t, --tools         install vm-tools in the VM"
+    echo -e "     --vcpus         Configure number of vCPUs [def: ${VCPUS}]"
     echo -e " -v, --verbose       increase verbosity of this script"
     echo -e "     --vmdk          generate also VMDK image"
     echo -e "     --vsock         attach a vsock device when installing the VM"
@@ -82,6 +86,10 @@ while [ "$1" != "" ]; do
             shift
             FV=$1
             ;;
+        --ram )
+            shift
+            RAM=$1
+            ;;
         -r | --rpms )
             RPMS=1
             ;;
@@ -97,6 +105,10 @@ while [ "$1" != "" ]; do
             ;;
         -t | --tools )
             TOOLS=1
+            ;;
+        --vcpus )
+            shift
+            VCPUS=$1
             ;;
         -v | --verbose )
             VERBOSE=1
@@ -179,7 +191,7 @@ if [ ! -f "${VM_IMAGE_BASE}" ]; then
 
     virt-install --connect qemu:///system --name "${VM}" --import \
         --noautoconsole --wait \
-        --ram 2048 --vcpus 2 --cpu host \
+        --ram "${RAM}" --vcpus "${VCPUS}" --cpu host \
         --disk bus=virtio,path="${VM_IMAGE_BASE}" \
         --network network=default,model=virtio --os-variant "${OS_VARIANT}" \
         || exit
@@ -212,7 +224,7 @@ if [ "${INSTALL}" == "1" ]; then
     # shellcheck disable=SC2086
     virt-install --connect qemu:///system --name "${VM}" --import \
         --noautoconsole --wait \
-        --ram 2048 --vcpus 2 --cpu host \
+        --ram "${RAM}" --vcpus "${VCPUS}" --cpu host \
         --disk bus=virtio,path="${VM_IMAGE}" \
         --network network=default,model=virtio,driver.name="qemu" \
         --os-variant "${OS_VARIANT}" \
